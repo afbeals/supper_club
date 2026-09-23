@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  WRITER
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum BulletKind {
+  PRO
+  CON
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(WRITER)
+  bio          String   @default("")
+  avatarPath   String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  sessions        Session[]
+  posts           Post[]
+  comments        Comment[]
+  productsCreated Product[] @relation("ProductCreatedBy")
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Configurable rating templates ─────────────────────────────────────────
+// ProductType + RatingCriterion archive (archivedAt), never hard-delete, so
+// existing reviews keep rendering after the config changes.
+
+model ProductType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String    @default("")
+  sortOrder   Int       @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  criteria RatingCriterion[]
+  products Product[]
+}
+
+model RatingCriterion {
+  id             Int       @id @default(autoincrement())
+  productTypeId  Int
+  name           String
+  description    String    @default("")
+  minValue       Int       @default(1)
+  maxValue       Int       @default(10)
+  higherIsBetter Boolean   @default(true)
+  weight         Float     @default(1)
+  sortOrder      Int       @default(0)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  productType ProductType @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
+  ratings     Rating[]
+
+  @@unique([productTypeId, name])
+  @@index([productTypeId])
+}
+
+// ─── Products & posts ───────────────────────────────────────────────────────
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  productTypeId Int
+  name          String
+  slug          String   @unique
+  subtitle      String   @default("")
+  url           String   @default("")
+  description   String   @default("")
+  imagePath     String?
+  createdById   Int
+  createdAt     DateTime @default(now())
+
+  productType ProductType @relation(fields: [productTypeId], references: [id], onDelete: Restrict)
+  createdBy   User        @relation("ProductCreatedBy", fields: [createdById], references: [id])
+  posts       Post[]
+
+  @@unique([productTypeId, name])
+  @@index([productTypeId])
+}
+
+model Post {
+  id          Int        @id @default(autoincrement())
+  status      PostStatus @default(DRAFT)
+  authorId    Int
+  title       String
+  slug        String     @unique
+  summary     String     @default("")
+  bodyHtml    String     @default("")
+  productId   Int
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  author   User         @relation(fields: [authorId], references: [id])
+  product  Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  ratings  Rating[]
+  bullets  PostBullet[]
+  images   PostImage[]
+  comments Comment[]
+  subitems Subitem[]
+
+  @@index([authorId])
+  @@index([productId])
+  @@index([status, publishedAt])
+}
+
+// A labeled piece of a single review: a food item ordered on a restaurant visit,
+// a chapter read from a book. Belongs to one Post (not the Product directly) —
+// "another review for a different meal" is just a second Post, which gets its
+// own independent set of subitems. notes/rating/images are all optional: a food
+// item might use all three, a chapter note typically uses just `notes`.
+model Subitem {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  label     String
+  notes     String?
+  rating    Int?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  post   Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  images PostImage[]
+
+  @@index([postId])
+}
+
+model Rating {
+  id          Int    @id @default(autoincrement())
+  postId      Int
+  criterionId Int
+  value       Int
+  note        String @default("")
+
+  post      Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  criterion RatingCriterion @relation(fields: [criterionId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, criterionId])
+  @@index([criterionId])
+}
+
+model PostBullet {
+  id        Int        @id @default(autoincrement())
+  postId    Int
+  kind      BulletKind
+  text      String
+  sortOrder Int        @default(0)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model PostImage {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  subitemId Int?
+  path      String
+  thumbPath String
+  width     Int
+  height    Int
+  caption   String   @default("")
+  sortOrder Int      @default(0)
+  mimeType  String
+  byteSize  Int
+  createdAt DateTime @default(now())
+
+  post    Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  subitem Subitem? @relation(fields: [subitemId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([subitemId])
+}
+
+model Comment {
+  id        Int       @id @default(autoincrement())
+  postId    Int
+  authorId  Int
+  parentId  Int?
+  bodyText  String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([parentId])
+}

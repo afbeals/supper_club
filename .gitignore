@@ -1,0 +1,14 @@
+node_modules
+.next
+.yarn/*
+!.yarn/releases
+!.yarn/patches
+.pnp.*
+*.tsbuildinfo
+.env
+.env.local
+data/
+test-results/
+playwright-report/
+coverage/
+.DS_Store

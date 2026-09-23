@@ -1,0 +1,19 @@
+services:
+  supper-club:
+    build:
+      context: .
+    container_name: supper-club
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persists data/prod.db and data/uploads/ outside the container. Change the
+      # host-side path to wherever this droplet keeps app data.
+      - /var/lib/supper-club/data:/app/data
+    environment:
+      DATABASE_URL: "file:../data/prod.db"
+      SESSION_SECRET: ${SESSION_SECRET}
+      UPLOAD_DIR: "./data/uploads"
+      # Set to "true" once a reverse proxy in front of this container terminates
+      # HTTPS — a Secure cookie is silently dropped over plain HTTP, breaking login.
+      COOKIE_SECURE: "true"
