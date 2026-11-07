@@ -15,6 +15,7 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: 'Supper Club',
+  robots: { index: false, follow: false, noarchive: true },
   description: 'Team reviews of the products and articles we actually use',
 };
 

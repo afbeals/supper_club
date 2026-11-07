@@ -89,6 +89,18 @@ export default async function PostDetailPage({ params }: { params: Promise<{ slu
         )}
       </Stack>
 
+      <Paper shadow="sm" p="lg">
+        <Stack gap="sm">
+          <Group justify="space-between">
+            <Text fw={700} size="sm">Personal rating</Text>
+            <Badge color="coral" size="lg" variant="filled">
+              {post.personalRating === null ? 'Not rated' : `${post.personalRating}/10`}
+            </Badge>
+          </Group>
+          {post.personalRating !== null && <Progress value={post.personalRating * 10} color="coral" size="sm" />}
+        </Stack>
+      </Paper>
+
       {post.ratings.length > 0 && (
         <Paper shadow="sm" p="lg">
           <Stack gap="sm">

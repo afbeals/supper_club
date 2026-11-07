@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PostForm } from '../PostForm';
@@ -77,5 +77,28 @@ describe('PostForm', () => {
     await user.type(input, 'corner');
     expect(screen.getByRole('option', { name: /Corner Bistro/, hidden: true })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: /Project Hail Mary/, hidden: true })).not.toBeInTheDocument();
+  });
+});
+
+describe('rating input regressions', () => {
+  it('always shows a personal rating independently of product selection', () => {
+    renderWithProviders(<PostForm />);
+    expect(screen.getByRole('slider', { name: 'Personal rating' })).toBeInTheDocument();
+    expect(screen.getByText('Not rated')).toBeInTheDocument();
+  });
+
+  it('updates a missing criterion and submits the new criterion and personal values', async () => {
+    const withCriteria = [{ ...products[0], productType: { ...products[0]!.productType, criteria: [{ id: 101, name: 'Pacing', minValue: 1, maxValue: 10 }] } }];
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ products: withCriteria, productTypes }) });
+    vi.stubGlobal('fetch', fetchMock);
+    renderWithProviders(<PostForm existingPost={{ id: 55, title: 'Legacy draft', summary: '', bodyHtml: '', productId: 1, personalRating: null, ratings: [], bullets: [], images: [], subitems: [] }} />);
+    const pacing = await screen.findByRole('slider', { name: 'Pacing' });
+    fireEvent.keyDown(pacing, { key: 'ArrowRight' });
+    expect(pacing).toHaveAttribute('aria-valuenow', '2');
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Personal rating' }), { key: 'End' });
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/posts/55', expect.objectContaining({ method: 'PATCH' })));
+    const request = fetchMock.mock.calls.find(([url]) => url === '/api/posts/55')!;
+    expect(JSON.parse(request[1].body)).toMatchObject({ personalRating: 10, ratings: [{ criterionId: 101, value: 2, note: '' }] });
   });
 });

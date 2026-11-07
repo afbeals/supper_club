@@ -5,6 +5,12 @@ export const createProductTypeSchema = z.object({
   description: z.string().trim().max(500).default(''),
 });
 
+export const updateProductTypeSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  description: z.string().trim().max(500).optional(),
+  archived: z.boolean().optional(),
+}).refine((data) => Object.keys(data).length > 0, 'Provide a change');
+
 export const createCriterionSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(500).default(''),

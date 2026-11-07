@@ -39,3 +39,16 @@ describe('createPostSchema', () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe('personal rating publishing rules', () => {
+  it.each([undefined, null])('allows unrated drafts (%s), but requires a rating to publish', (personalRating) => {
+    expect(createPostSchema.safeParse({ ...baseReview, personalRating }).success).toBe(true);
+    expect(createPostSchema.safeParse({ ...baseReview, status: 'PUBLISHED', personalRating }).success).toBe(false);
+  });
+  it.each([0, 11, 3.5, '8'])('rejects invalid personal rating %s', (personalRating) => {
+    expect(createPostSchema.safeParse({ ...baseReview, personalRating }).success).toBe(false);
+  });
+  it.each([1, 10])('accepts boundary rating %s for publication', (personalRating) => {
+    expect(createPostSchema.safeParse({ ...baseReview, status: 'PUBLISHED', personalRating }).success).toBe(true);
+  });
+});

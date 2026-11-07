@@ -67,6 +67,7 @@ interface PostFormValues {
   summary: string;
   bodyHtml: string;
   productId: string;
+  personalRating: number | null;
   ratings: RatingValue[];
   bullets: BulletValue[];
   subitems: SubitemValue[];
@@ -79,6 +80,7 @@ export interface ExistingPost {
   summary: string;
   bodyHtml: string;
   productId: number;
+  personalRating: number | null;
   ratings: { criterionId: number; value: number; note: string }[];
   bullets: { kind: 'PRO' | 'CON'; text: string }[];
   images: UploadedImage[];
@@ -103,6 +105,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
           summary: existingPost.summary,
           bodyHtml: existingPost.bodyHtml,
           productId: String(existingPost.productId),
+          personalRating: existingPost.personalRating ?? null,
           ratings: existingPost.ratings,
           bullets: existingPost.bullets.map((b) => ({ ...b, key: randomKey() })),
           subitems: existingPost.subitems.map((s) => ({ ...s, key: randomKey() })),
@@ -113,6 +116,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
           summary: '',
           bodyHtml: '',
           productId: '',
+          personalRating: null,
           ratings: [],
           bullets: [],
           subitems: [],
@@ -138,8 +142,8 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
 
   const selectedProduct = products?.find((p) => String(p.id) === form.values.productId) ?? null;
 
-  function handleProductChange(productId: string) {
-    const product = products?.find((p) => String(p.id) === productId);
+  function handleProductChange(productId: string, availableProducts = products) {
+    const product = availableProducts?.find((p) => String(p.id) === productId);
     form.setFieldValue('productId', productId);
     form.setFieldValue(
       'ratings',
@@ -156,7 +160,12 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
   function updateRating(criterionId: number, patch: Partial<RatingValue>) {
     form.setFieldValue(
       'ratings',
-      form.values.ratings.map((r) => (r.criterionId === criterionId ? { ...r, ...patch } : r)),
+      (ratings) => {
+        const existing = ratings.find((r) => r.criterionId === criterionId);
+        return existing
+          ? ratings.map((r) => r.criterionId === criterionId ? { ...r, ...patch } : r)
+          : [...ratings, { criterionId, value: patch.value ?? 1, note: '', ...patch }];
+      },
     );
   }
 
@@ -173,10 +182,15 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
     const body = (await response.json()) as { products: ProductOption[]; productTypes: ProductTypeOption[] };
     setProducts(body.products);
     setProductTypes(body.productTypes);
-    handleProductChange(String(productId));
+    handleProductChange(String(productId), body.products);
   }
 
   async function handleSave(status: 'DRAFT' | 'PUBLISHED') {
+    if (status === 'PUBLISHED' && form.values.personalRating === null) {
+      form.setFieldError('personalRating', 'Choose a personal rating before publishing');
+      notifications.show({ color: 'red', title: 'Personal rating required', message: 'Choose a personal rating before publishing' });
+      return;
+    }
     const validation = form.validate();
     if (validation.hasErrors) {
       notifications.show({ color: 'red', title: 'Fix the highlighted fields', message: 'Some required fields are missing' });
@@ -191,6 +205,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
       bodyHtml: values.bodyHtml,
       images: values.images,
       productId: Number(values.productId),
+      personalRating: values.personalRating,
       ratings: values.ratings,
       bullets: values.bullets.filter((b) => b.text.trim().length > 0).map(({ kind, text }) => ({ kind, text })),
       subitems: values.subitems
@@ -268,6 +283,20 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
             </Button>
           </Group>
 
+          <Stack gap="sm">
+            <Group justify="space-between">
+              <Text size="sm" fw={600}>Personal rating</Text>
+              <Badge color="coral" size="sm" variant="filled" aria-live="polite">
+                {form.values.personalRating === null ? 'Not rated' : `${form.values.personalRating}/10`}
+              </Badge>
+            </Group>
+            <Slider min={1} max={10} step={1} color="coral" thumbLabel="Personal rating"
+              value={form.values.personalRating ?? 1}
+              onChange={(value) => form.setFieldValue('personalRating', value)} />
+            {form.errors.personalRating && <Text c="red" size="sm" role="alert">{form.errors.personalRating}</Text>}
+            <Text size="xs" c="dimmed">Your own overall impression, independent of the criteria. Required to publish.</Text>
+          </Stack>
+
           {selectedProduct && selectedProduct.productType.criteria.length > 0 && (
             <Stack gap="sm">
               <Text size="sm" fw={600}>
@@ -284,6 +313,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
                       </Badge>
                     </Group>
                     <Slider
+                      thumbLabel={criterion.name}
                       min={criterion.minValue}
                       max={criterion.maxValue}
                       step={1}

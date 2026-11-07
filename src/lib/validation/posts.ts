@@ -36,10 +36,15 @@ export const createPostSchema = z.object({
   summary: z.string().trim().max(500).default(''),
   bodyHtml: z.string().default(''),
   images: z.array(uploadedImageSchema).default([]),
+  personalRating: z.number().int().min(1).max(10).nullable().default(null),
   productId: z.number().int(),
   ratings: z.array(ratingInputSchema).default([]),
   bullets: z.array(bulletInputSchema).default([]),
   subitems: z.array(subitemInputSchema).default([]),
+}).superRefine((post, context) => {
+  if (post.status === 'PUBLISHED' && post.personalRating === null) {
+    context.addIssue({ code: 'custom', path: ['personalRating'], message: 'Choose a personal rating before publishing' });
+  }
 });
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
