@@ -26,6 +26,8 @@ async function logout(page: Page) {
 
 // One serial describe block: each step depends on state the previous step created
 // (product type -> product -> two reviews -> compare -> comment -> anonymous view).
+test.skip(({ isMobile }) => isMobile, 'Full admin walkthrough runs on desktop; touch inputs have dedicated mobile regressions.');
+
 test.describe.serial('golden path: admin config through publish, compare, and comments', () => {
   let firstReviewUrl = '';
 
@@ -81,6 +83,8 @@ test.describe.serial('golden path: admin config through publish, compare, and co
     await page.locator('[contenteditable="true"]').click();
     await page.keyboard.type('Does exactly what it says on the box.');
 
+    await page.getByRole('slider', { name: 'Personal rating' }).focus();
+    await page.keyboard.press('End');
     await page.getByRole('button', { name: 'Publish' }).click();
     await page.waitForURL('/dashboard');
 
@@ -112,6 +116,8 @@ test.describe.serial('golden path: admin config through publish, compare, and co
     await page.locator('[contenteditable="true"]').click();
     await page.keyboard.type('Fine, but overpriced for what it does.');
 
+    await page.getByRole('slider', { name: 'Personal rating' }).focus();
+    await page.keyboard.press('End');
     await page.getByRole('button', { name: 'Publish' }).click();
     await page.waitForURL('/dashboard');
 
