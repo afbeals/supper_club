@@ -6,6 +6,8 @@ services:
 
     ports:
       - "127.0.0.1:3000:3000"
+
+    volumes:
       # Persists data/prod.db and data/uploads/ outside the container. Change the
       # host-side path to wherever this droplet keeps app data.
       - /var/lib/supper-club/data:/app/data

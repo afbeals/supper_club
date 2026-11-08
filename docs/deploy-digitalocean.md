@@ -724,6 +724,25 @@ Finally:
 
 ## 15. Updating the production application
 
+### Optional shortcut and update notes
+
+The existing local release and DigitalOcean update commands below remain available. Keep your established working process and the droplet's current Compose file, host ports, data mounts, environment settings and reverse-proxy configuration. Paths, container names and ports in this guide are repository examples; they have not been checked on your droplet.
+
+From a checkout containing the intended release, the existing shortcut can also be invoked with npm:
+
+```sh
+npm run docker:release
+```
+
+It invokes the same script as `yarn docker:release`: build `afbeals/supper-club:<package.json version>`, tag latest and push both. It does not run tests, change the version, log in or update the droplet. The version for this release is already `1.0.1`; do not bump it again just to run the shortcut. For future releases, use your established versioning process. An optional npm alternative is `npm version patch --no-git-tag-version`; commit any resulting package/lockfile changes.
+
+Only if Docker Hub authentication is missing or expired, run `docker login` with your usual account. Existing working authentication needs no extra step. When building on an Apple Silicon Mac for an Intel/AMD droplet, target `linux/amd64` (for example, `export DOCKER_DEFAULT_PLATFORM=linux/amd64` before building). Keep a working build setup unchanged when its architecture already matches.
+
+The existing `docker:release` workflow rebuilds before publishing. If you instead want to publish the exact image already built, tagged and tested locally, `yarn docker:push` is an optional alternative. The original commands below remain available.
+
+Use your existing backup method before upgrading. The image entrypoint automatically applies pending migrations, including the nullable personal-rating column. A migration changes the database, so retain a pre-upgrade backup. Normal upgrades do not require reseeding existing data. After updating, check the existing health endpoint, login, reviews and uploaded images; verify crawler directives using [search visibility](search-visibility.md).
+
+
 Application updates happen on the local development machine first.
 
 ### Local workflow
@@ -966,6 +985,20 @@ sudo tar -czf "/tmp/supper-club-$(date +%Y%m%d).tar.gz" \
   -C /var/lib/supper-club data
 ```
 
+### Optional consistent filesystem backup
+
+The existing backup example above is retained. If you use a filesystem archive, stop the application while making it so SQLite and its companion files form a consistent backup. The example below assumes the documented paths; substitute your actual Compose directory and data mount.
+
+```bash
+cd /opt/supper-club
+docker compose stop supper-club
+sudo tar -czf "/tmp/supper-club-$(date +%Y%m%d-%H%M%S).tar.gz" \
+  -C /var/lib/supper-club data
+docker compose start supper-club
+```
+
+Check that the archive succeeded before upgrading and copy it to off-droplet storage. This is an optional addition to the existing deployment instructions, not a replacement for an established backup tool or process.
+
 A backup must include both the SQLite database and the uploads directory.
 
 Do not rely on Docker images as database backups.
@@ -1114,6 +1147,26 @@ If another application already requires port 3000, change the host-side Docker p
 reverse proxy accordingly.
 
 ---
+
+### Old UI after updating or invalid Server Reference ID
+
+The new UI is served when a replacement container containing the new code starts successfully. Startup and pull times depend on the image, network and pending migrations; no fixed startup time has been measured on your droplet.
+
+Check `docker compose ps`, the startup logs and `/api/health`, then hard-refresh the browser or open a private window. Compare the running image with the pulled tag:
+
+```bash
+cd /opt/supper-club
+docker inspect --format '{{.Image}}' supper-club
+docker image inspect --format '{{.Id}}' afbeals/supper-club:latest
+```
+
+If the IDs differ and your Compose service uses `latest`, run `docker compose up -d supper-club` to replace the old container. For a version-pinned deployment, pull and compare the specific tag configured in Compose.
+
+Matching image IDs only proves that the container uses the image you pulled. The published tag can still contain old code: check the tag's last-pushed date on Docker Hub. If it predates the intended changes, complete the local release workflow in section 15, wait for both image pushes to succeed, then pull and replace the droplet container again. `docker compose pull` never builds GitHub changes or publishes a release.
+
+If a private window still shows old content after confirming a newly published image is running, check any reverse-proxy/CDN HTML caching and confirm the public hostname reaches this droplet.
+
+`The Server Reference ID did not match the expected format. Received "x"` means Next.js received a malformed client-supplied Server Action identifier. It is not a normal startup message. An isolated log entry while the site works may come from a bot or malformed request; this message alone does not show a database failure. Older browser tabs and mismatched deployments can also produce Server Action errors, although the exact `"x"` message identifies a malformed ID. If the error coincides with a failing page, collect the timestamp, request path/status and surrounding application/reverse-proxy logs for diagnosis.
 
 ### Container is running but never becomes healthy
 

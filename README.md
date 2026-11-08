@@ -33,3 +33,7 @@ yarn dev
 | `yarn db:reset` | Wipe and reseed the dev database — **local only** |
 | `yarn db:seed` | Seed sample data |
 | `yarn db:studio` | Prisma Studio |
+
+## Release and update
+
+The existing `yarn docker:release` can also be run as `npm run docker:release`. It builds, tags and pushes the versioned image and `latest`. See the [DigitalOcean runbook](docs/deploy-digitalocean.md#15-updating-the-production-application) for optional shortcut notes and troubleshooting alongside the existing release, backup and deployment commands. Preserve your working deployment settings.
