@@ -9,6 +9,7 @@ Next.js/Prisma/SQLite app for team-internal product reviews, comparisons, and di
 | --- | --- |
 | [architecture.md](./architecture.md) | System shape, route groups, the RSC (Server/Client Component) rules that bit us, directory map |
 | [database.md](./database.md) | Prisma schema, all models, migrations, seed data, why Prisma 6 not 7 |
+| [search-visibility.md](./search-visibility.md) | Crawl/index controls and removing an already-indexed subdomain |
 | [auth.md](./auth.md) | Sessions, the access model by area, route guards, cookie security |
 | [api.md](./api.md) | Every API route, its auth requirement, and its request/response shape |
 | [development.md](./development.md) | Local setup, everyday commands, common pitfalls |

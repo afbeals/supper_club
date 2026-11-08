@@ -26,6 +26,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
+  if (parsed.data.status === 'PUBLISHED' && existing.personalRating === null) {
+    return NextResponse.json({ error: 'Choose a personal rating in the review editor before publishing' }, { status: 400 });
+  }
+
   const post = await prisma.post.update({
     where: { id: postId },
     data: {

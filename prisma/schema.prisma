@@ -122,6 +122,7 @@ model Post {
   summary     String     @default("")
   bodyHtml    String     @default("")
   productId   Int
+  personalRating Int?
   publishedAt DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

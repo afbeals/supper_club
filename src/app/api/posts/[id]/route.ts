@@ -88,6 +88,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         status: data.status,
         publishedAt,
         images: { create: data.images.map((img, i) => ({ ...img, sortOrder: i })) },
+        personalRating: data.personalRating,
         productId: data.productId,
         ratings: { create: data.ratings.map((r) => ({ criterionId: r.criterionId, value: r.value, note: r.note })) },
         bullets: { create: data.bullets.map((b, i) => ({ kind: b.kind, text: b.text, sortOrder: i })) },

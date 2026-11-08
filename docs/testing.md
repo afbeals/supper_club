@@ -95,36 +95,26 @@ rather than checking in a binary fixture, and cleans up every file it writes in 
 yarn test:e2e
 ```
 
-`playwright.config.ts` points `webServer` at `yarn dev` with `reuseExistingServer: !process.env.CI`
-— locally it'll reuse a dev server you already have running on :3000, or start and manage its own.
+Build first with `yarn build`, install browsers with `yarn playwright install chromium webkit`,
+then run `yarn test:e2e`. The runner starts a production server on port 3000 using a
+fresh temporary SQLite database with all migrations and seed data. It refuses to
+reuse an existing server and removes its database when the server exits.
 
-- `tests/e2e/smoke.spec.ts` — trivial "home page loads" check.
-- `tests/e2e/golden-path.spec.ts` — the full product walkthrough, one `describe.serial` block
-  because each step depends on state the previous step created: admin creates a product type +
-  2 criteria → admin creates a product → admin authors/rates/publishes a review → the review is
-  publicly visible from the product hub → a second writer publishes a second review of the same
-  product → the product hub aggregates both and the compare page shows them side by side → a
-  signed-in user comments → an anonymous visitor gets read-only access (comment box hidden, a
-  direct `POST /api/comments` returns 401).
+- `tests/e2e/smoke.spec.ts` verifies public page rendering.
+- `tests/e2e/golden-path.spec.ts` covers the desktop admin/product/review/compare/comment journey.
+- `tests/e2e/ratings.spec.ts` runs on desktop Chromium, Pixel Chromium, and iPhone WebKit.
+  It covers missing criterion rows in old drafts, keyboard input, mouse dragging,
+  mobile taps and Chromium touch dragging, personal rating save/reload/publish,
+  creating products inside the form, renaming product types while preserving
+  associations, and crawler headers/metadata/robots.txt.
 
-### Test data hygiene
+`src/lib/__tests__/review-routes.test.ts` applies real SQLite migrations to an isolated
+database and covers create/update/publish validation, ownership, existing published
+reviews, and product-type edit conflicts. Personal ratings remain nullable for legacy
+records and drafts; publishing requires a value between 1 and 10.
 
-Every entity the suite creates embeds a `Date.now()`-based `RUN_ID` in its name
-(`Widget ${RUN_ID}`, `E2E Gadget ${RUN_ID}`, ...) so repeated runs against the same dev database
-never collide with each other. Even so, **clean up leftover rows from prior runs before rerunning
-against a shared dev database** — stale rows from earlier manual reruns can cause confusing false
-failures (a real incident: an anonymous-visitor assertion failed claiming "no comments," and the
-actual cause was a stale row from an *older* run being read instead of the current run's):
-
-```bash
-sqlite3 data/dev.db "PRAGMA foreign_keys = ON; \
-  DELETE FROM Post WHERE slug LIKE 'widget-%'; \
-  DELETE FROM Product WHERE slug LIKE 'widget-%'; \
-  DELETE FROM ProductType WHERE name LIKE 'E2E%';"
-```
-
-`PRAGMA foreign_keys = ON` is required for the cascade deletes to actually fire — the raw
-`sqlite3` CLI doesn't enable it by default (see `database.md`).
+`.github/workflows/quality.yml` runs lint, types, Vitest, production build and all
+browser projects. Failure traces and screenshots are retained as workflow artifacts.
 
 ### Locator patterns that worked here
 

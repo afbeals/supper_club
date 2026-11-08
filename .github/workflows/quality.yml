@@ -1,0 +1,41 @@
+name: Regression checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      DATABASE_URL: file:/tmp/supper-build.db
+      SESSION_SECRET: ci-test-secret-at-least-thirty-two-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn db:generate
+      - run: yarn lint
+      - run: yarn typecheck
+      - run: yarn test:ci
+      - run: yarn build
+      - run: yarn playwright install --with-deps chromium webkit
+      - run: yarn test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-regressions
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

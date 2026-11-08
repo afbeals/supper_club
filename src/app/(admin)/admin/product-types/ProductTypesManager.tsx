@@ -57,6 +57,7 @@ export function ProductTypesManager({
 }) {
   const router = useRouter();
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ProductTypeWithCriteria | null>(null);
 
   async function handleArchiveProductType(id: number, archived: boolean) {
     const result = await patchJson(`/api/admin/product-types/${id}`, { archived });
@@ -113,6 +114,7 @@ export function ProductTypesManager({
                   onRefresh={() => router.refresh()}
                 />
                 <Group justify="flex-end">
+                  <Button variant="light" size="xs" onClick={() => setEditing(productType)}>Edit product type</Button>
                   <Button
                     variant="light"
                     color={productType.archivedAt ? 'green' : 'red'}
@@ -131,6 +133,7 @@ export function ProductTypesManager({
         ))}
       </Accordion>
 
+      {editing && <EditProductTypeModal productType={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
       <CreateProductTypeModal
         opened={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
@@ -324,4 +327,38 @@ function CreateProductTypeModal({
       </form>
     </Modal>
   );
+}
+
+function EditProductTypeModal({ productType, onClose, onSaved }: {
+  productType: ProductTypeWithCriteria; onClose: () => void; onSaved: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const form = useForm<ProductTypeFormValues>({
+    initialValues: { name: productType.name, description: productType.description },
+    validate: { name: (value) => value.trim() ? null : 'Name is required' },
+  });
+  async function handleSubmit(values: ProductTypeFormValues) {
+    setSubmitting(true);
+    setError('');
+    try {
+      const result = await patchJson(`/api/admin/product-types/${productType.id}`, values);
+      if (result.error) { setError(result.error); return; }
+      onSaved();
+    } catch { setError('Could not save the product type. Please try again.'); }
+    finally { setSubmitting(false); }
+  }
+  return <Modal opened onClose={onClose} title="Edit product type">
+    <form onSubmit={form.onSubmit(handleSubmit)}>
+      <Stack>
+        <TextInput label="Name" required {...form.getInputProps('name')} />
+        <TextInput label="Description" {...form.getInputProps('description')} />
+        {error && <Text c="red" role="alert">{error}</Text>}
+        <Group justify="flex-end">
+          <Button variant="default" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button type="submit" loading={submitting}>Save changes</Button>
+        </Group>
+      </Stack>
+    </form>
+  </Modal>;
 }
