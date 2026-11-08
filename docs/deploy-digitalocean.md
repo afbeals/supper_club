@@ -1115,7 +1115,11 @@ docker inspect --format '{{.Image}}' supper-club
 docker image inspect --format '{{.Id}}' afbeals/supper-club:latest
 ```
 
-If the IDs differ and your Compose service uses `latest`, run `docker compose up -d supper-club` to replace the old container. If a private window still shows old content while the correct image is running, check any reverse-proxy/CDN HTML caching and confirm the public hostname reaches this droplet. For a version-pinned deployment, pull and compare the specific tag configured in Compose.
+If the IDs differ and your Compose service uses `latest`, run `docker compose up -d supper-club` to replace the old container. For a version-pinned deployment, pull and compare the specific tag configured in Compose.
+
+Matching image IDs only proves that the container uses the image you pulled. The published tag can still contain old code: check the tag's last-pushed date on Docker Hub. If it predates the intended changes, complete the local release workflow in section 15, wait for both image pushes to succeed, then pull and replace the droplet container again. `docker compose pull` never builds GitHub changes or publishes a release.
+
+If a private window still shows old content after confirming a newly published image is running, check any reverse-proxy/CDN HTML caching and confirm the public hostname reaches this droplet.
 
 `The Server Reference ID did not match the expected format. Received "x"` means Next.js received a malformed client-supplied Server Action identifier. It is not a normal startup message. An isolated log entry while the site works may come from a bot or malformed request; this message alone does not show a database failure. Older browser tabs and mismatched deployments can also produce Server Action errors, although the exact `"x"` message identifies a malformed ID. If the error coincides with a failing page, collect the timestamp, request path/status and surrounding application/reverse-proxy logs for diagnosis.
 
