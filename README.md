@@ -36,4 +36,4 @@ yarn dev
 
 ## Release and update
 
-Run `npm run docker:release` (or `yarn docker:release`) to build, tag and push the versioned image and `latest` to Docker Hub. The [DigitalOcean runbook](docs/deploy-digitalocean.md#15-updating-the-production-application) covers Docker login, versioning, architecture, local image testing, backups, container replacement, persistent data and post-update verification.
+The existing `yarn docker:release` can also be run as `npm run docker:release`. It builds, tags and pushes the versioned image and `latest`. See the [DigitalOcean runbook](docs/deploy-digitalocean.md#15-updating-the-production-application) for optional shortcut notes and troubleshooting alongside the existing release, backup and deployment commands. Preserve your working deployment settings.
