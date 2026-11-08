@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 async function post(request: APIRequestContext, url: string, data: unknown) {
@@ -15,7 +16,7 @@ async function track(slider: Locator) {
 
 test('legacy missing criteria respond to keyboard, mouse and mobile touch and persist with personal rating', async ({ page, isMobile, browserName }, info) => {
   await admin(page);
-  const name = `Input regression ${info.project.name}`;
+  const name = `Input regression ${info.project.name} ${randomUUID().slice(0, 8)}`;
   const { productType } = await post(page.request, '/api/admin/product-types', { name });
   const { product } = await post(page.request, '/api/products', { productTypeId: productType.id, name });
   const { post: draft } = await post(page.request, '/api/posts', { status: 'DRAFT', title: name, productId: product.id, ratings: [] });
@@ -65,9 +66,9 @@ test('legacy missing criteria respond to keyboard, mouse and mobile touch and pe
   await expect(page.getByText('9/10', { exact: true })).toBeVisible();
 });
 
-test('newly created products initialize criteria and product types can be renamed without losing associations', async ({ page }, info) => {
+test('newly created products initialize criteria and product types can be renamed without losing associations', async ({ page, isMobile }, info) => {
   await admin(page);
-  const name = `Editable type ${info.project.name}`;
+  const name = `Editable type ${info.project.name} ${randomUUID().slice(0, 8)}`;
   const { productType } = await post(page.request, '/api/admin/product-types', { name });
   await post(page.request, `/api/admin/product-types/${productType.id}/criteria`, { name: 'Value', minValue: 1, maxValue: 10, higherIsBetter: true, weight: 1 });
   await page.goto('/posts/new');
@@ -81,8 +82,15 @@ test('newly created products initialize criteria and product types can be rename
   await expect(page.getByRole('slider', { name: 'Value', exact: true })).toHaveAttribute('aria-valuenow', '6');
   await page.goto('/admin/product-types');
   await page.getByRole('button', { name, exact: true }).click();
-  await page.getByRole('button', { name: 'Edit product type', exact: true }).click();
-  await page.getByRole('dialog').getByRole('textbox', { name: 'Name', exact: true }).fill(`${name} renamed`);
+  const panel = page.getByRole('region', { name, exact: true });
+  // Wait for the expanding panel before scrolling to its actions on mobile Safari.
+  await expect(panel).toHaveCSS('overflow', 'visible');
+  const edit = panel.getByRole('button', { name: 'Edit product type', exact: true });
+  if (isMobile) await edit.tap();
+  else await edit.click();
+  const editDialog = page.getByRole('dialog', { name: 'Edit product type', exact: true });
+  await expect(editDialog).toBeVisible();
+  await editDialog.getByRole('textbox', { name: 'Name', exact: true }).fill(`${name} renamed`);
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.reload();
