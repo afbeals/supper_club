@@ -241,8 +241,7 @@ push version
 push latest
 ```
 
-In normal use, `yarn docker:release` is the command used after the production image has been
-tested locally.
+`yarn docker:release` builds and pushes immediately. To publish the exact image you already tested locally, use `yarn docker:push` instead.
 
 ---
 
@@ -308,11 +307,11 @@ The local production-image test should verify:
 
 ## 6. Publish a release to Docker Hub
 
-Once the production image has been tested successfully:
+Once the production image has been tested successfully, publish that image:
 
 ```bash
 clear
-yarn docker:release
+yarn docker:push
 ```
 
 For example, if `package.json` contains:
@@ -724,73 +723,57 @@ Finally:
 
 ## 15. Updating the production application
 
-Application updates happen on the local development machine first.
+### Local release shortcut
 
-### Local workflow
+After merging the release changes, run these commands from your local Supper Club checkout:
 
-```text
-Make code changes
-      ↓
-yarn dev
-      ↓
-Test application
-      ↓
-yarn typecheck
-      ↓
-yarn test
-      ↓
-yarn docker:build
-      ↓
-yarn docker:tag
-      ↓
-yarn docker:test
-      ↓
-Test production Docker image
-      ↓
-yarn docker:release
+```sh
+git switch main
+git pull --ff-only
+docker login --username afbeals
+npm version patch --no-git-tag-version
+npm run docker:release
 ```
 
-Once the release is on Docker Hub, deploy it to DigitalOcean.
+`npm run docker:release` and `yarn docker:release` invoke the same script. It builds, tags and pushes `afbeals/supper-club:<package.json version>` and `afbeals/supper-club:latest`. Choose a fresh version and commit the package/lockfile changes so earlier release tags remain available for rollback. The shortcut does not bump the version, run tests or update the droplet.
 
-### DigitalOcean workflow
+When building on an Apple Silicon Mac for an Intel/AMD droplet, first set `export DOCKER_DEFAULT_PLATFORM=linux/amd64`; in PowerShell use `$env:DOCKER_DEFAULT_PLATFORM = "linux/amd64"`.
+
+To inspect the exact image before publishing, run `yarn docker:build`, `yarn docker:tag` and `yarn docker:test`. Open http://localhost:3000, finish checking and press Ctrl+C. Then run `yarn docker:push` to publish that image; `yarn docker:release` starts a fresh build.
+
+### DigitalOcean update
+
+Connect with `ssh YOUR_USER@YOUR_DROPLET_IP`. The documented deployment uses `/opt/supper-club/compose.yaml` and `/var/lib/supper-club/data`; substitute your existing paths if they differ. Preserve the existing `.env`, production session secret, HTTPS/cookie settings and data mapping.
+
+Pull the published image first, then stop the application before backing up the database and uploads:
 
 ```bash
-clear
 cd /opt/supper-club
-docker compose pull
-docker compose up -d
+docker compose pull supper-club
+docker compose stop supper-club
+sudo mkdir -p /var/backups
+sudo tar -czf "/var/backups/supper-club-$(date +%Y%m%d-%H%M%S).tar.gz" \
+  -C /var/lib/supper-club data
+```
+
+Check that the backup succeeded before starting the upgrade. Copy the archive to off-droplet backup storage. Start the replacement container and verify it:
+
+```bash
+docker compose up -d supper-club
 docker compose ps
-```
-
-Then inspect the logs:
-
-```bash
-clear
-cd /opt/supper-club
 docker compose logs --tail=100 supper-club
+curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-The new container starts from the newly pulled image.
+The health response should be `{"status":"ok"}`. Also open the public HTTPS site and check login, reviews and uploaded images. The existing nginx/Caddy reverse proxy continues forwarding to port 3000.
 
-Any new Prisma migrations are applied automatically by `docker/entrypoint.sh`.
+The image entrypoint applies pending Prisma migrations automatically, including the personal-rating column. Normal upgrades do not require manually running migrations or seeding demo data.
 
-The existing:
+The existing `/var/lib/supper-club/data` directory remains mounted at `/app/data`, retaining `prod.db` and `uploads/`. Most startup failures also leave those files intact; migrations modify the database, so retain the pre-upgrade backup. Keep the data mapping under `volumes:` as shown in section 8 and in the repository Compose file.
 
-```text
-/var/lib/supper-club/data/prod.db
-```
+There is no source checkout, dependency install or application build on the droplet.
 
-remains intact.
-
-The existing:
-
-```text
-/var/lib/supper-club/data/uploads/
-```
-
-also remains intact.
-
-There is no `git pull`, `yarn install`, `yarn build`, or Docker build on the DigitalOcean droplet.
+After deploying crawler-control changes, verify `/robots.txt` and response headers, and follow [search visibility](search-visibility.md) for existing Google/Bing listings.
 
 ---
 
@@ -958,13 +941,18 @@ uploads/
 
 Back up this entire directory to off-droplet storage.
 
-For example:
+Stop the application while creating a filesystem archive so SQLite and its companion files form a consistent backup:
 
 ```bash
-clear
-sudo tar -czf "/tmp/supper-club-$(date +%Y%m%d).tar.gz" \
+cd /opt/supper-club
+docker compose stop supper-club
+sudo mkdir -p /var/backups
+sudo tar -czf "/var/backups/supper-club-$(date +%Y%m%d-%H%M%S).tar.gz" \
   -C /var/lib/supper-club data
+docker compose start supper-club
 ```
+
+Check that the archive succeeded before upgrading, and copy it to off-droplet storage. Use the host data path already configured for your deployment.
 
 A backup must include both the SQLite database and the uploads directory.
 
@@ -1115,6 +1103,22 @@ reverse proxy accordingly.
 
 ---
 
+### Old UI after updating or invalid Server Reference ID
+
+The new UI is served as soon as the replacement container starts successfully; normal updates usually reach healthy within a minute or two, with no extra UI propagation delay afterward. Pulling the image can take longer depending on network speed, and migrations can extend startup time.
+
+Check `docker compose ps`, the startup logs and `/api/health`, then hard-refresh the browser or open a private window. Compare the running image with the pulled tag:
+
+```bash
+cd /opt/supper-club
+docker inspect --format '{{.Image}}' supper-club
+docker image inspect --format '{{.Id}}' afbeals/supper-club:latest
+```
+
+If the IDs differ and your Compose service uses `latest`, run `docker compose up -d supper-club` to replace the old container. If a private window still shows old content while the correct image is running, check any reverse-proxy/CDN HTML caching and confirm the public hostname reaches this droplet. For a version-pinned deployment, pull and compare the specific tag configured in Compose.
+
+`The Server Reference ID did not match the expected format. Received "x"` means Next.js received a malformed client-supplied Server Action identifier. It is not a normal startup message. An isolated log entry while the site works may come from a bot or malformed request; this message alone does not show a database failure. Older browser tabs and mismatched deployments can also produce Server Action errors, although the exact `"x"` message identifies a malformed ID. If the error coincides with a failing page, collect the timestamp, request path/status and surrounding application/reverse-proxy logs for diagnosis.
+
 ### Container is running but never becomes healthy
 
 Check:
@@ -1181,7 +1185,7 @@ The normal workflow is:
 │       ↓                     │
 │  Test production image      │
 │       ↓                     │
-│  yarn docker:release        │
+│  yarn docker:push           │
 └──────────────┬──────────────┘
                │
                ▼
