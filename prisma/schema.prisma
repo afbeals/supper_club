@@ -123,6 +123,8 @@ model Post {
   bodyHtml    String     @default("")
   productId   Int
   personalRating Int?
+  // A calendar date (YYYY-MM-DD), independent of the server/browser time zone.
+  experiencedOn String?
   publishedAt DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

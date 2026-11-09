@@ -37,6 +37,7 @@ export const createPostSchema = z.object({
   bodyHtml: z.string().default(''),
   images: z.array(uploadedImageSchema).default([]),
   personalRating: z.number().int().min(1).max(10).nullable().default(null),
+  experiencedOn: z.iso.date({ error: 'Enter a valid experience date' }).nullable().optional(),
   productId: z.number().int(),
   ratings: z.array(ratingInputSchema).default([]),
   bullets: z.array(bulletInputSchema).default([]),

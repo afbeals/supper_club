@@ -734,7 +734,7 @@ From a checkout containing the intended release, the existing shortcut can also 
 npm run docker:release
 ```
 
-It invokes the same script as `yarn docker:release`: build `afbeals/supper-club:<package.json version>`, tag latest and push both. It does not run tests, change the version, log in or update the droplet. The version for this release is already `1.0.1`; do not bump it again just to run the shortcut. For future releases, use your established versioning process. An optional npm alternative is `npm version patch --no-git-tag-version`; commit any resulting package/lockfile changes.
+It invokes the same script as `yarn docker:release`: build `afbeals/supper-club:<package.json version>`, tag latest and push both. It does not run tests, change the version, log in or update the droplet. The version for this release is already `1.0.2`; do not bump it again just to run the shortcut. For future releases, use your established versioning process. An optional npm alternative is `npm version patch --no-git-tag-version`; commit any resulting package/lockfile changes.
 
 Only if Docker Hub authentication is missing or expired, run `docker login` with your usual account. Existing working authentication needs no extra step. When building on an Apple Silicon Mac for an Intel/AMD droplet, target `linux/amd64` (for example, `export DOCKER_DEFAULT_PLATFORM=linux/amd64` before building). Keep a working build setup unchanged when its architecture already matches.
 

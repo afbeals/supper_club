@@ -10,3 +10,10 @@ export function relativeTime(date: Date): string {
   if (seconds < 86400 * 30) return `${Math.round(seconds / 86400)}d ago`;
   return formatDate(date);
 }
+
+// Date-only values must not shift to the previous day in time zones west of UTC.
+export function formatDateOnly(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
+  });
+}

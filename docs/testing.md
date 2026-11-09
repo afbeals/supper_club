@@ -142,3 +142,70 @@ fail to attach to an already-running Chrome instance — they're different mecha
 launches its own isolated browser process; the MCP tools attach to an existing one over a debug
 port). If interactive browser MCP tools aren't available, Playwright's own test runner is still a
 valid way to get real browser verification.
+
+
+## Experience dates and visual regressions
+
+Reviews can optionally store an experience date as `YYYY-MM-DD`. The form uses the
+browser's date input/calendar picker, with the existing Mantine input styling.
+The title and date share a row on wider screens and stack below 576px. Published
+reviews show an `Experienced:` date only when present, beside the `Reviewed:` date.
+The stored calendar day is formatted independently of server/browser time zones.
+
+The added validation, form and real-SQLite route tests cover omitted/null dates,
+valid leap days, invalid dates, editing and clearing, preserving dates when older
+clients omit the field, and migrating existing reviews without changing their data.
+`tests/e2e/experience-date.spec.ts` covers save/reload/publish/clear and responsive
+input alignment on desktop Chromium, mobile Chromium and mobile WebKit. Narrow-screen
+checks also keep the navigation inside its header so it cannot cover the form.
+
+Screenshot comparisons cover the new/edit form and published review with and without
+an experience date at desktop, Pixel, iPhone and 320px widths:
+
+```bash
+yarn build
+yarn test:visual
+```
+
+The visual runner reuses the isolated temporary browser-test server with an optional
+`--visual` fixture setup. Fixtures have fixed dates and cannot run against the
+production database. The existing E2E server command is unchanged.
+
+Baselines are captured on macOS; the additive `visual` CI job uses macOS 15 while
+application regressions continue running on Linux. After reviewing an intentional
+style change on macOS, regenerate the checked-in screenshots with:
+
+```bash
+yarn test:visual:update
+```
+
+Native calendar/picker chrome is supplied by each browser or operating system;
+screenshot assertions cover the application fields and review layout.
+
+
+## Release version check
+
+The `Release version` CI job requires every pull request to increase
+`package.json.version` above the PR base commit's version. Unchanged or lower
+versions fail, including changes to build metadata alone. Versions use SemVer
+ordering, so `1.0.10` sorts above `1.0.9` and a stable release sorts above its
+prereleases. Both root version fields in `package-lock.json` must match
+`package.json`; the Yarn workspace lock entry does not store the release version.
+
+Run the same check locally against your PR's base ref or commit:
+
+```bash
+yarn check:version origin/main
+```
+
+Ensure that ref is up to date using your usual Git fetch workflow. Without a base
+argument, `yarn check:version` validates the current version and lockfile only.
+Pushes to `main` and manual CI runs use that consistency-only mode, because the
+version increase is checked on pull requests. A supplied base ref that cannot be
+resolved fails rather than silently skipping the comparison.
+
+For a new release, use your existing versioning workflow (for example,
+`npm version patch --no-git-tag-version`) and commit the package/lockfile changes.
+The release shortcut continues to read the version from `package.json`; CI does
+not build or publish Docker images. Script tests cover SemVer ordering, lockfile
+mismatches, the Git base comparison, and command exit status in temporary repos.

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Badge, Group, Image, Paper, Progress, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatDateOnly } from '@/lib/format';
 import { normalizeRating, overallScore } from '@/lib/scoring';
 import { CommentThread } from '@/components/comments/CommentThread';
 import { LinkAvatar } from '@/components/shared/LinkAvatar';
@@ -66,7 +66,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ slu
           <LinkAvatar href={`/writers/${post.author.id}`} size={40} color="coral" variant="filled">
             {post.author.name.slice(0, 1).toUpperCase()}
           </LinkAvatar>
-          <Stack gap={0}>
+          <Stack gap={0} flex={1} miw={0}>
             <Text size="sm">
               <LinkText href={`/writers/${post.author.id}`} span fw={700} style={{ color: 'var(--mantine-color-black)' }}>
                 {post.author.name}
@@ -76,9 +76,16 @@ export default async function PostDetailPage({ params }: { params: Promise<{ slu
                 {post.product.name}
               </LinkText>
             </Text>
-            <Text size="xs" c="sand.6">
-              {formatDate(post.publishedAt ?? post.createdAt)}
-            </Text>
+            <Group gap="sm" style={{ rowGap: 4 }}>
+              <Text size="xs" c="sand.6">
+                Reviewed: <time dateTime={(post.publishedAt ?? post.createdAt).toISOString()}>{formatDate(post.publishedAt ?? post.createdAt)}</time>
+              </Text>
+              {post.experiencedOn && (
+                <Text size="xs" c="sand.6">
+                  Experienced: <time dateTime={post.experiencedOn}>{formatDateOnly(post.experiencedOn)}</time>
+                </Text>
+              )}
+            </Group>
           </Stack>
         </Group>
         <Title order={1}>{post.title}</Title>

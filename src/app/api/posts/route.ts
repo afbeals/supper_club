@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       bodyHtml,
       publishedAt,
       personalRating: data.personalRating,
+      experiencedOn: data.experiencedOn,
       productId: data.productId,
       images: { create: data.images.map((img, i) => ({ ...img, sortOrder: i })) },
       ratings: { create: data.ratings.map((r) => ({ criterionId: r.criterionId, value: r.value, note: r.note })) },
