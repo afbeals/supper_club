@@ -1,6 +1,6 @@
 {
   "name": "supper-club",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "packageManager": "yarn@4.18.0",
@@ -28,7 +28,8 @@
     "test:e2e": "playwright test",
     "test:visual": "playwright test --config playwright.visual.config.ts",
     "test:visual:update": "playwright test --config playwright.visual.config.ts --update-snapshots",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:version": "node scripts/check-version.ts"
   },
   "dependencies": {
     "@mantine/core": "9.6.1",

@@ -10,6 +10,21 @@ concurrency:
   group: quality-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  version:
+    name: Release version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check version increase and lockfile consistency
+        env:
+          VERSION_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/check-version.ts "$VERSION_BASE"
   regression:
     runs-on: ubuntu-latest
     timeout-minutes: 20

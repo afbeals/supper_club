@@ -181,3 +181,31 @@ yarn test:visual:update
 
 Native calendar/picker chrome is supplied by each browser or operating system;
 screenshot assertions cover the application fields and review layout.
+
+
+## Release version check
+
+The `Release version` CI job requires every pull request to increase
+`package.json.version` above the PR base commit's version. Unchanged or lower
+versions fail, including changes to build metadata alone. Versions use SemVer
+ordering, so `1.0.10` sorts above `1.0.9` and a stable release sorts above its
+prereleases. Both root version fields in `package-lock.json` must match
+`package.json`; the Yarn workspace lock entry does not store the release version.
+
+Run the same check locally against your PR's base ref or commit:
+
+```bash
+yarn check:version origin/main
+```
+
+Ensure that ref is up to date using your usual Git fetch workflow. Without a base
+argument, `yarn check:version` validates the current version and lockfile only.
+Pushes to `main` and manual CI runs use that consistency-only mode, because the
+version increase is checked on pull requests. A supplied base ref that cannot be
+resolved fails rather than silently skipping the comparison.
+
+For a new release, use your existing versioning workflow (for example,
+`npm version patch --no-git-tag-version`) and commit the package/lockfile changes.
+The release shortcut continues to read the version from `package.json`; CI does
+not build or publish Docker images. Script tests cover SemVer ordering, lockfile
+mismatches, the Git base comparison, and command exit status in temporary repos.
