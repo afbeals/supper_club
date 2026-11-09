@@ -26,6 +26,8 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:e2e": "playwright test",
+    "test:visual": "playwright test --config playwright.visual.config.ts",
+    "test:visual:update": "playwright test --config playwright.visual.config.ts --update-snapshots",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

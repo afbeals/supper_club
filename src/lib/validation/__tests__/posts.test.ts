@@ -52,3 +52,24 @@ describe('personal rating publishing rules', () => {
     expect(createPostSchema.safeParse({ ...baseReview, status: 'PUBLISHED', personalRating }).success).toBe(true);
   });
 });
+
+
+describe('optional experience dates', () => {
+  it.each([undefined, null, '2026-11-09', '2024-02-29'])(
+    'accepts an optional calendar date (%s) for drafts and published reviews', (experiencedOn) => {
+      for (const status of ['DRAFT', 'PUBLISHED']) {
+        const result = createPostSchema.safeParse({ ...baseReview, status, personalRating: 8, experiencedOn });
+        expect(result.success).toBe(true);
+        if (result.success) expect(result.data.experiencedOn).toBe(experiencedOn);
+      }
+    },
+  );
+
+  it.each(['2026-02-29', '2026-04-31', '2026-13-01', '11/09/2026', '2026-11-09T00:00:00Z', '', 123])(
+    'rejects an invalid or non-date-only experience value (%s)', (experiencedOn) => {
+      const result = createPostSchema.safeParse({ ...baseReview, experiencedOn });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues[0]?.path).toEqual(['experiencedOn']);
+    },
+  );
+});

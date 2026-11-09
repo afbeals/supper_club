@@ -39,3 +39,30 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+  visual:
+    # Match the macOS screenshot baselines; application regressions still run on Linux.
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      DATABASE_URL: file:/tmp/supper-visual-build.db
+      SESSION_SECRET: ci-visual-secret-at-least-thirty-two-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn db:generate
+      - run: yarn build
+      - run: yarn playwright install chromium webkit
+      - run: yarn test:visual
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-regressions
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

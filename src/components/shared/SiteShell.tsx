@@ -34,9 +34,9 @@ export function SiteShell({
   }
 
   return (
-    <AppShell header={{ height: 80 }} padding="md">
+    <AppShell header={{ height: { base: 104, xs: 80 } }} padding="md">
       <AppShell.Header style={{ backgroundColor: '#fffefc', border: 'none', boxShadow: 'var(--mantine-shadow-sm)' }}>
-        <Group h="100%" px="xl" justify="space-between">
+        <Group h="100%" px={{ base: 'md', sm: 'xl' }} justify="space-between">
           <Group gap="xl">
             <Text
               component={Link}

@@ -13,10 +13,12 @@ const env = {
   NEXT_TELEMETRY_DISABLED: '1',
 };
 try {
-  for (const args of [
+  const setup = [
     ['node_modules/prisma/build/index.js', 'migrate', 'deploy'],
     ['node_modules/tsx/dist/cli.mjs', 'prisma/seed.ts'],
-  ]) {
+  ];
+  if (process.argv.includes('--visual')) setup.push(['node_modules/tsx/dist/cli.mjs', 'scripts/visual-fixtures.ts']);
+  for (const args of setup) {
     const result = spawnSync(process.execPath, args, { env, stdio: 'inherit' });
     if (result.status !== 0) throw new Error('Could not prepare isolated browser fixtures');
   }

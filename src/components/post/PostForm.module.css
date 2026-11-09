@@ -1,0 +1,17 @@
+.details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12rem;
+  gap: var(--mantine-spacing-md);
+  align-items: start;
+}
+
+.dateInput {
+  min-width: 0;
+  font-size: 16px;
+}
+
+@media (max-width: 36em) {
+  .details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

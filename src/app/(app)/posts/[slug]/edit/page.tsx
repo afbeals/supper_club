@@ -36,6 +36,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ slug:
     bodyHtml: post.bodyHtml,
     productId: post.productId,
     personalRating: post.personalRating,
+    experiencedOn: post.experiencedOn,
     ratings: post.ratings.map((r) => ({ criterionId: r.criterionId, value: r.value, note: r.note })),
     bullets: post.bullets.map((b) => ({ kind: b.kind, text: b.text })),
     images: post.images.map((img) => ({

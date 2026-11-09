@@ -102,3 +102,40 @@ describe('rating input regressions', () => {
     expect(JSON.parse(request[1].body)).toMatchObject({ personalRating: 10, ratings: [{ criterionId: 101, value: 2, note: '' }] });
   });
 });
+
+
+describe('experience date input', () => {
+  const draft = { id: 55, title: 'A lovely evening', summary: '', bodyHtml: '', productId: 1, personalRating: 8, ratings: [], bullets: [], images: [], subitems: [] };
+
+  it('starts blank and optional on a new review', () => {
+    renderWithProviders(<PostForm />);
+    const input = screen.getByLabelText('Experience date');
+    expect(input).toHaveAttribute('type', 'date');
+    expect(input).not.toBeRequired();
+    expect(input).toHaveValue('');
+    expect(input).toHaveAccessibleDescription('Optional');
+  });
+
+  it.each(['2026-11-09', ''])(
+    'loads, edits, and saves a date-only value or clears it (%s)', async (value) => {
+      const fetchMock = vi.mocked(fetch);
+      renderWithProviders(<PostForm existingPost={{ ...draft, experiencedOn: '2026-10-31' }} />);
+      const input = screen.getByLabelText('Experience date');
+      expect(input).toHaveValue('2026-10-31');
+      fireEvent.change(input, { target: { value } });
+      await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/posts/55', expect.objectContaining({ method: 'PATCH' })));
+      const saved = fetchMock.mock.calls.find(([url]) => url === '/api/posts/55')!;
+      expect(JSON.parse((saved[1] as RequestInit).body as string).experiencedOn).toBe(value || null);
+    },
+  );
+
+  it('still publishes an existing review without an experience date', async () => {
+    const fetchMock = vi.mocked(fetch);
+    renderWithProviders(<PostForm existingPost={draft} />);
+    await userEvent.click(screen.getByRole('button', { name: /^Publish$/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/posts/55', expect.objectContaining({ method: 'PATCH' })));
+    const saved = fetchMock.mock.calls.find(([url]) => url === '/api/posts/55')!;
+    expect(JSON.parse((saved[1] as RequestInit).body as string)).toMatchObject({ status: 'PUBLISHED', experiencedOn: null });
+  });
+});

@@ -22,6 +22,7 @@ import { notifications } from '@mantine/notifications';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { ImageDropzone, type UploadedImage } from '@/components/shared/ImageDropzone';
 import { RichTextEditorField } from '@/components/shared/RichTextEditorField';
+import classes from './PostForm.module.css';
 
 interface CriterionOption {
   id: number;
@@ -64,6 +65,7 @@ interface RatingValue {
 
 interface PostFormValues {
   title: string;
+  experiencedOn: string;
   summary: string;
   bodyHtml: string;
   productId: string;
@@ -76,6 +78,7 @@ interface PostFormValues {
 
 export interface ExistingPost {
   id: number;
+  experiencedOn?: string | null;
   title: string;
   summary: string;
   bodyHtml: string;
@@ -102,6 +105,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
     initialValues: existingPost
       ? {
           title: existingPost.title,
+          experiencedOn: existingPost.experiencedOn ?? '',
           summary: existingPost.summary,
           bodyHtml: existingPost.bodyHtml,
           productId: String(existingPost.productId),
@@ -113,6 +117,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
         }
       : {
           title: '',
+          experiencedOn: '',
           summary: '',
           bodyHtml: '',
           productId: '',
@@ -201,6 +206,7 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
     const payload = {
       status,
       title: values.title,
+      experiencedOn: values.experiencedOn || null,
       summary: values.summary,
       bodyHtml: values.bodyHtml,
       images: values.images,
@@ -242,7 +248,17 @@ export function PostForm({ existingPost }: { existingPost?: ExistingPost }) {
 
       <Paper shadow="sm" p="lg">
         <Stack>
-          <TextInput label="Title" required {...form.getInputProps('title')} />
+          <div className={classes.details}>
+            <TextInput label="Title" required {...form.getInputProps('title')} />
+            <TextInput
+              label="Experience date"
+              description="Optional"
+              type="date"
+              inputWrapperOrder={['label', 'input', 'description', 'error']}
+              classNames={{ input: classes.dateInput }}
+              {...form.getInputProps('experiencedOn')}
+            />
+          </div>
           <Textarea
             label="Summary / verdict"
             description="Shown in listings and at the top of the post"

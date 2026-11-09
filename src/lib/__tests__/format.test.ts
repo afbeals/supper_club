@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { formatDate, relativeTime } from '../format';
+import { formatDate, formatDateOnly, relativeTime } from '../format';
 
 describe('formatDate', () => {
   it('formats a date as "Mon D, YYYY"', () => {
@@ -42,4 +42,17 @@ describe('relativeTime', () => {
   it('falls back to formatDate at 30 days and beyond', () => {
     expect(relativeTime(new Date(now.getTime() - 31 * 86400 * 1000))).toBe(formatDate(new Date(now.getTime() - 31 * 86400 * 1000)));
   });
+});
+
+
+describe('date-only experience formatting', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(['America/Los_Angeles', 'Pacific/Honolulu', 'Pacific/Kiritimati'])(
+    'preserves the calendar day in %s', (zone) => {
+      vi.stubEnv('TZ', zone);
+      expect(formatDateOnly('2026-11-09')).toBe('Nov 9, 2026');
+      expect(formatDateOnly('2024-02-29')).toBe('Feb 29, 2024');
+    },
+  );
 });
