@@ -742,7 +742,6 @@ The existing `docker:release` workflow rebuilds before publishing. If you instea
 
 Use your existing backup method before upgrading. The image entrypoint automatically applies pending migrations, including the nullable personal-rating column. A migration changes the database, so retain a pre-upgrade backup. Normal upgrades do not require reseeding existing data. After updating, check the existing health endpoint, login, reviews and uploaded images; verify crawler directives using [search visibility](search-visibility.md).
 
-
 Application updates happen on the local development machine first.
 
 ### Local workflow
@@ -1036,7 +1035,48 @@ DigitalOcean:
 
 ---
 
-## 21. Troubleshooting
+## 21. Low-Space Sequence for Digital Ocean pull
+
+### Not enough space to perform the standard process of pulling image down before swapping
+
+#### Perform the following sequence on the droplet:
+
+Navigate to the image directory:
+
+```text
+cd /opt/supper-club
+```
+
+Stop and remove the application container:
+
+```text
+docker compose stop supper-club
+docker compose rm -f supper-club
+```
+
+Remove locally tagged Supper Club images to free space:
+
+```text
+docker image ls --format '{{.Repository}}:{{.Tag}}' afbeals/supper-club | xargs -r docker image rm
+```
+
+Download and start the new image:
+
+```text
+docker compose pull supper-club
+docker compose up -d supper-club
+```
+
+check startup:
+
+```text
+docker compose ps
+docker compose logs --tail=100 supper-club
+```
+
+---
+
+## 22. Troubleshooting
 
 ### Build fails installing `better-sqlite3` or Prisma
 
@@ -1159,6 +1199,29 @@ cd /opt/supper-club
 docker inspect --format '{{.Image}}' supper-club
 docker image inspect --format '{{.Id}}' afbeals/supper-club:latest
 ```
+
+#### alternatively run:
+
+```text
+supper_running=$(docker image inspect \
+  "$(docker inspect --format '{{.Image}}' supper-club)" \
+  --format '{{range .RepoDigests}}{{println .}}{{end}}')
+
+supper_remote=$(docker buildx imagetools inspect afbeals/supper-club:latest \
+  | awk '$1 == "Digest:" {print $2; exit}')
+
+if [ -z "$supper_running" ] || [ -z "$supper_remote" ]; then
+  echo "Unable to retriev both image digests."
+elif printf '%s\n' "$supper_running" | grep -Fq "@$supper_remote"; then
+  echo "MATCH: the running container useds Docker Hub's latest image."
+else
+  echo "DIFFERENT: the running container does not use Docker Hub's latest image."
+fi
+```
+
+to compare against a specific release instead, replace `afbeals/supper-club:latest` with `afbeals:supper-club:<version>`
+
+#### Description
 
 If the IDs differ and your Compose service uses `latest`, run `docker compose up -d supper-club` to replace the old container. For a version-pinned deployment, pull and compare the specific tag configured in Compose.
 
