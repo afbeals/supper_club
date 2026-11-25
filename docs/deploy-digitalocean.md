@@ -292,6 +292,16 @@ production data.
 
 Press `Ctrl+C` to stop the test container.
 
+if port still in use run:
+
+```text
+docker ps --filter publish=3000
+```
+
+```test
+docker stop <CONTAINER_ID>
+```
+
 The local production-image test should verify:
 
 - Application starts successfully
